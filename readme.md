@@ -13,6 +13,23 @@ An AI-powered web-based system for analyzing **retina fundus images** and managi
 | Syed Bilal Quadri     | 160922748154 |
 ---
 
+### 👨‍🏫 Project Guide
+**Mazher Uddin**  
+Associate Professor  
+
+---
+
+### 🧑‍🏫 Co-Guide / HoD
+**Dr. Abdul Rasool Mohammed**  
+Associate Professor & Head of Department, CSE (AIML)  
+
+---
+
+### 🏫 Institution
+**Lords Institute of Engineering and Technology, Hyderabad**
+
+---
+
 ## 🖼️ Sample Image Specifications
 
 Ensure all uploaded retinal images meet the following standards:

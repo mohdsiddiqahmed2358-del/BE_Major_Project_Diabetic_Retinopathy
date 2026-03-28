@@ -4,28 +4,6 @@ An AI-powered web-based system for analyzing **retina fundus images** and managi
 
 ---
 
-## 🔗👨‍💻 Team
-
-| Name                  | Roll Number  |
-| --------------------- | ------------ |
-| Mohammed Siddiq Ahmed | 160922748124 |
-| Mohammed Zohaib Adeel | 160922748129 |
-| Syed Bilal Quadri     | 160922748154 |
----
-
-### 👨‍🏫 Project Guide
-**Mazher Uddin**  
-Associate Professor  
-
-### 🧑‍🏫 Co-Guide / HoD
-**Dr. Abdul Rasool Mohammed**  
-Associate Professor & Head of Department, CSE (AIML)  
-
-### 🏫 Institution
-**Lords Institute of Engineering and Technology, Hyderabad**
-
----
-
 ## 🖼️ Sample Image Specifications
 
 Ensure all uploaded retinal images meet the following standards:
@@ -225,3 +203,25 @@ python manage.py runserver
 | Image upload fails  | Check format & size     |
 | Static files issue  | Run collectstatic       |
 | Server not starting | Check environment       |
+
+---
+
+## 🔗👨‍💻 Team
+
+| Name                  | Roll Number  |
+| --------------------- | ------------ |
+| Mohammed Siddiq Ahmed | 160922748124 |
+| Mohammed Zohaib Adeel | 160922748129 |
+| Syed Bilal Quadri     | 160922748154 |
+---
+
+### 👨‍🏫 Project Guide
+**Mazher Uddin**  
+Associate Professor  
+
+### 🧑‍🏫 Co-Guide / HoD
+**Dr. Abdul Rasool Mohammed**  
+Associate Professor & Head of Department, CSE (AIML)  
+
+### 🏫 Institution
+**Lords Institute of Engineering and Technology, Hyderabad**

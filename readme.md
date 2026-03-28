@@ -216,8 +216,8 @@ python manage.py runserver
 ---
 
 ### 👨‍🏫 Project Guide
-**Mazher Uddin**  
-Associate Professor  
+**Mr. Naushad Alam**  
+Assistant Professor  
 
 ### 🧑‍🏫 Co-Guide / HoD
 **Dr. Abdul Rasool Mohammed**  

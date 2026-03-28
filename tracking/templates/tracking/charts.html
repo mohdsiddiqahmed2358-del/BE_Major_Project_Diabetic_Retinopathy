@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Progression Charts - RetinaDetect{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Patient Progression Overview</h2>
+            <div>
+                <a href="{% url 'tracking:create_visit' %}" class="btn btn-primary me-2">Record Visit</a>
+                <a href="{% url 'tracking:create_treatment_plan' %}" class="btn btn-outline-primary">Create Treatment Plan</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {% for stat in patient_stats %}
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ stat.patient.first_name }} {{ stat.patient.last_name }}</h5>
+                <p class="card-text">
+                    <strong>Patient ID:</strong> {{ stat.patient.patient_id }}<br>
+                    <strong>Latest MA Count:</strong> {{ stat.latest_ma_count }}<br>
+                    <strong>Latest Lesion Area:</strong> {{ stat.latest_lesion_area|floatformat:2 }} px²<br>
+                    <strong>Total Visits:</strong> {{ stat.visit_count }}
+                </p>
+                <span class="badge {% if stat.trend == 'improving' %}bg-success{% elif stat.trend == 'worsening' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ stat.trend|title }}
+                </span>
+                <div class="mt-3">
+                    <a href="{% url 'tracking:patient_progress' stat.patient.id %}" class="btn btn-sm btn-outline-primary">View Progress</a>
+                    <a href="{% url 'images:patient_detail' stat.patient.id %}" class="btn btn-sm btn-outline-secondary">Patient Details</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+            <h4>No Progression Data Available</h4>
+            <p class="text-muted">Get started by recording patient visits and processing retina images.</p>
+            <a href="{% url 'tracking:create_visit' %}" class="btn btn-primary me-2">Record First Visit</a>
+            <a href="{% url 'images:upload' %}" class="btn btn-outline-primary">Upload Images</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

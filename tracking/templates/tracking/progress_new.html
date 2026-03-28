@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+{% load percent_filters %}
+
+{% block title %}{{ patient }} Progress - RetinaDetect{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Patient Progress Tracking</h2>
+            <div>
+                <a href="{% url 'images:patient_detail' patient.pk %}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Patient
+                </a>
+                <a href="{% url 'tracking:create_visit' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Record Visit
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Patient Summary -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h4>{{ patient.first_name }} {{ patient.last_name }}</h4>
+                        <p class="text-muted mb-0">
+                            Patient ID: {{ patient.patient_id }} | 
+                            Date of Birth: {{ patient.date_of_birth }} | 
+                            Total Detections: {{ detection_results|length }}
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        {% if detection_results|length > 1 %}
+                            {% with latest=detection_results|last previous=detection_results|slice:"0:-1"|last %}
+                                {% if latest.microaneurysms_count < previous.microaneurysms_count %}
+                                <span class="badge bg-success">Improving</span>
+                                {% elif latest.microaneurysms_count > previous.microaneurysms_count %}
+                                <span class="badge bg-danger">Worsening</span>
+                                {% else %}
+                                <span class="badge bg-warning">Stable</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Total Detections</h5>
+                <h2 class="card-text">{{ detection_results|length }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Latest MA Count</h5>
+                {% if detection_results|length > 0 %}
+                    {% with latest=detection_results|last %}
+                    <h2 class="card-text">{{ latest.microaneurysms_count }}</h2>
+                    {% endwith %}
+                {% else %}
+                    <h2 class="card-text">—</h2>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Latest Lesion Area</h5>
+                {% if detection_results|length > 0 %}
+                    {% with latest=detection_results|last %}
+                    <h2 class="card-text">{{ latest.lesion_area|floatformat:1 }} px²</h2>
+                    {% endwith %}
+                {% else %}
+                    <h2 class="card-text">—</h2>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Latest Confidence</h5>
+                {% if detection_results|length > 0 %}
+                    {% with latest=detection_results|last %}
+                    <h2 class="card-text">{{ latest.confidence_score|to_percent|floatformat:2 }}%</h2>
+                    {% endwith %}
+                {% else %}
+                    <h2 class="card-text">—</h2>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Microaneurysm Count Trend</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="maCountChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Lesion Area Trend</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="lesionAreaChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detection History Table -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Detection History</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>MA Count</th>
+                                <th>Lesion Area</th>
+                                <th>Confidence</th>
+                                <th>Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detection in detection_results|slice:"::-1" %}
+                            <tr>
+                                <td>{{ detection.detection_date|date:"b d, Y H:i:s" }}</td>
+                                <td><strong>{{ detection.microaneurysms_count }}</strong></td>
+                                <td>{{ detection.lesion_area|floatformat:2 }} px²</td>
+                                <td>{{ detection.confidence_score|to_percent|floatformat:2 }}%</td>
+                                <td>
+                                    {% if forloop.first %}
+                                        <span class="badge bg-secondary">Latest</span>
+                                    {% else %}
+                                        {% with prev=detection_results|slice:"::-1"|dictsort:"detection_date"|slice:forloop.counter:forloop.counter|first %}
+                                        {% if detection.microaneurysms_count < prev.microaneurysms_count %}
+                                            <span class="badge bg-success">↓ Improving</span>
+                                        {% elif detection.microaneurysms_count > prev.microaneurysms_count %}
+                                            <span class="badge bg-danger">↑ Worsening</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">→ Stable</span>
+                                        {% endif %}
+                                        {% endwith %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Treatment Plans -->
+{% if treatment_plans %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Active Treatment Plans</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for plan in treatment_plans %}
+                    <div class="list-group-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">{{ plan.plan_name }}</h6>
+                                <p class="text-muted mb-0 small">{{ plan.description }}</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <small class="text-muted">
+                                    {% if plan.start_date %}Started: {{ plan.start_date|date:"b d, Y" }}{% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+let chartsRendered = false;
+
+// Fetch data from API
+function fetchProgressionData() {
+    const patientId = {{ patient.pk }};
+    const apiUrl = `/tracking/api/progression/${patientId}/`;
+    
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            renderCharts(data);
+            chartsRendered = true;
+        })
+        .catch(error => {
+            console.log('API fetch failed, using template data:', error);
+            renderChartsWithStaticData();
+        });
+}
+
+function renderCharts(data) {
+    const ctx1 = document.getElementById('maCountChart').getContext('2d');
+    new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: data.dates,
+            datasets: [{
+                label: 'Microaneurysm Count',
+                data: data.ma_counts,
+                borderColor: 'rgb(220, 53, 69)',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    const ctx2 = document.getElementById('lesionAreaChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: data.dates,
+            datasets: [{
+                label: 'Lesion Area (px²)',
+                data: data.lesion_areas,
+                backgroundColor: 'rgba(23, 162, 184, 0.5)',
+                borderColor: 'rgb(23, 162, 184)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function renderChartsWithStaticData() {
+    // Fallback: render with template data if API fails
+    const staticData = {
+        dates: {{ dates|safe }},
+        ma_counts: {{ ma_counts|safe }},
+        lesion_areas: {{ lesion_areas|safe }}
+    };
+    renderCharts(staticData);
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    fetchProgressionData();
+});
+</script>
+{% endblock %}

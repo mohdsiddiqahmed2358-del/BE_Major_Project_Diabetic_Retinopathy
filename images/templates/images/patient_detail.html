@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ patient }} - RetinaDetect{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>{{ patient.first_name }} {{ patient.last_name }}</h2>
+            <a href="{% url 'images:patient_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Patients
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Patient Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Patient ID:</strong> {{ patient.patient_id }}</p>
+                <p><strong>Name:</strong> {{ patient.first_name }} {{ patient.last_name }}</p>
+                <p><strong>Date of Birth:</strong> {{ patient.date_of_birth }}</p>
+                <p><strong>Gender:</strong> {{ patient.get_gender_display }}</p>
+                <p><strong>Contact:</strong> {{ patient.contact_info }}</p>
+                <p><strong>Medical History:</strong> {{ patient.medical_history }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Retina Images</h5>
+                <a href="{% url 'images:upload' %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-upload me-1"></i>Upload Image
+                </a>
+            </div>
+            <div class="card-body">
+                {% if images %}
+                <div class="row">
+                    {% for image in images %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card">
+                            <img src="{{ image.original_image.url }}" class="card-img-top" alt="Retina Image" style="height: 150px; object-fit: cover;">
+                            <div class="card-body">
+                                <h6 class="card-title">Image {{ image.id }}</h6>
+                                <p class="card-text">
+                                    <small class="text-muted">Uploaded: {{ image.upload_date|date:"M d, Y" }}</small>
+                                </p>
+                                <a href="{% url 'images:image_detail' image.pk %}" class="btn btn-sm btn-outline-primary w-100">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                    <h5>No Images Found</h5>
+                    <p class="text-muted">No retina images uploaded for this patient yet.</p>
+                    <a href="{% url 'images:upload' %}" class="btn btn-primary">Upload Image</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Batch Upload - RetinaDetect{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Custom file input handling for multiple files
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.multiple = true;
+    fileInput.accept = 'image/jpeg,image/png,image/tiff';
+    fileInput.style.display = 'none';
+    
+    const fileList = document.getElementById('fileList');
+    const chooseFilesBtn = document.getElementById('chooseFilesBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    
+    let selectedFiles = [];
+    
+    chooseFilesBtn.addEventListener('click', function() {
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', function(e) {
+        selectedFiles = Array.from(e.target.files);
+        updateFileList();
+    });
+    
+    function updateFileList() {
+        fileList.innerHTML = '';
+        
+        if (selectedFiles.length === 0) {
+            fileList.innerHTML = '<div class="text-muted">No files selected</div>';
+            uploadBtn.disabled = true;
+            return;
+        }
+        
+        uploadBtn.disabled = false;
+        
+        selectedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item d-flex justify-content-between align-items-center p-2 border-bottom';
+            
+            const fileInfo = document.createElement('div');
+            fileInfo.innerHTML = `
+                <i class="fas fa-file-image text-primary me-2"></i>
+                <strong>${file.name}</strong>
+                <small class="text-muted ms-2">(${(file.size / 1024 / 1024).toFixed(2)} MB)</small>
+            `;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-outline-danger';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.onclick = function() {
+                selectedFiles.splice(index, 1);
+                updateFileList();
+            };
+            
+            fileItem.appendChild(fileInfo);
+            fileItem.appendChild(removeBtn);
+            fileList.appendChild(fileItem);
+        });
+    }
+    
+    // Handle form submission
+    document.getElementById('batchUploadForm').addEventListener('submit', function(e) {
+        if (selectedFiles.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one file to upload.');
+            return;
+        }
+        
+        // Create a FormData object and append all files
+        const formData = new FormData(this);
+        
+        // Remove the existing images field
+        formData.delete('images');
+        
+        // Append each selected file
+        selectedFiles.forEach(file => {
+            formData.append('images', file);
+        });
+        
+        // Submit the form via AJAX or let it proceed normally
+        // For now, we'll let it proceed normally
+        this.submit();
+    });
+    
+    // Initialize empty file list
+    updateFileList();
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Batch Image Upload</h2>
+            <a href="{% url 'images:image_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Images
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-folder-plus me-2"></i>Upload Multiple Images
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="batchUploadForm">
+                    {% csrf_token %}
+                    {{ form.patient|as_crispy_field }}
+                    {{ form.images }}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Select Images</label>
+                        <div class="border rounded p-3 text-center">
+                            <button type="button" id="chooseFilesBtn" class="btn btn-outline-primary">
+                                <i class="fas fa-folder-open me-2"></i>Choose Files
+                            </button>
+                            <p class="mt-2 mb-0 text-muted">
+                                Select multiple JPEG, PNG, or TIFF images (max 10MB each)
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Selected Files</label>
+                        <div id="fileList" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            <div class="text-muted">No files selected</div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> You can select multiple images at once. 
+                        Supported formats: JPEG, PNG, TIFF. Maximum file size: 10MB per image.
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="submit" id="uploadBtn" class="btn btn-primary" disabled>
+                            <i class="fas fa-upload me-2"></i>Upload Images
+                        </button>
+                        <a href="{% url 'images:image_list' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.file-item {
+    transition: background-color 0.2s;
+}
+.file-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,388 @@
+{% extends 'base.html' %}
+{% load percent_filters %}
+
+{% block title %}{{ patient }} Progress - RetinaDetect{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Patient Progress Tracking</h2>
+            <div>
+                <a href="{% url 'images:patient_detail' patient.pk %}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Patient
+                </a>
+                <a href="{% url 'tracking:create_visit' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Record Visit
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Patient Summary -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h4>{{ patient.first_name }} {{ patient.last_name }}</h4>
+                        <p class="text-muted mb-0">
+                            Patient ID: {{ patient.patient_id }} | 
+                            Date of Birth: {{ patient.date_of_birth }} | 
+                            Total Detections: {{ detection_results.count }}
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        {% if detection_results.count > 1 %}
+                            {% with latest=detection_results|last previous=detection_results|slice:"-2:-1"|first %}
+                                {% if latest.microaneurysms_count < previous.microaneurysms_count %}
+                                <span class="badge bg-success">Improving</span>
+                                {% elif latest.microaneurysms_count > previous.microaneurysms_count %}
+                                <span class="badge bg-danger">Worsening</span>
+                                {% else %}
+                                <span class="badge bg-warning">Stable</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row mb-4">
+    {% if detection_results %}
+        {% with latest=detection_results|last %}
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Latest Detections</h6>
+                    <h3 class="text-primary">{{ latest.microaneurysms_count }}</h3>
+                    <small>Microaneurysms</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Lesion Area</h6>
+                    <h3 class="text-success">{{ latest.lesion_area|floatformat:2 }}</h3>
+                    <small>px²</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Confidence</h6>
+                    <h3 class="text-info">{{ latest.confidence_score|to_percent|floatformat:2 }}%</h3>
+                    <small>Score</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Processing</h6>
+                    <h3 class="text-warning">{{ latest.processing_time|floatformat:2 }}</h3>
+                    <small>seconds</small>
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+    {% endif %}
+</div>
+
+<!-- Charts -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Microaneurysms Over Time
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="maChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-area me-2"></i>Lesion Area Over Time
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="areaChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Charts -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Detection Comparison (Bar Chart)
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="barChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-check-circle me-2"></i>Confidence Score Trend
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="confidenceChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progression Data Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Detection History
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if detection_results %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Detection Date</th>
+                                <th>Microaneurysms</th>
+                                <th>Lesion Area</th>
+                                <th>Confidence</th>
+                                <th>Processing Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detection in detection_results|slice:"::-1" %}
+                            <tr>
+                                <td>{{ detection.detection_date|date:"M d, Y H:i:s" }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ detection.microaneurysms_count }}</span>
+                                </td>
+                                <td>{{ detection.lesion_area|floatformat:2 }} px²</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: {{ detection.confidence_score|to_percent }}%;" 
+                                             aria-valuenow="{{ detection.confidence_score|to_percent }}" 
+                                             aria-valuemin="0" aria-valuemax="100">
+                                            {{ detection.confidence_score|to_percent|floatformat:1 }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ detection.processing_time|floatformat:2 }}s</td>
+                                <td>
+                                    <span class="badge bg-success">{{ detection.get_status_display }}</span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'detection:result' detection.pk %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-chart-bar"></i> Results
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                    <h5>No Detection Data Available</h5>
+                    <p class="text-muted">No detection results have been recorded for this patient yet.</p>
+                    <a href="{% url 'images:upload' %}" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i>Upload Images to Start Detection
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch chart data from API for real-time updates
+    fetch('{% url "tracking:api_progression_data" patient.pk %}')
+        .then(response => response.json())
+        .then(data => {
+            renderCharts(data);
+        })
+        .catch(error => {
+            console.error('Error fetching chart data:', error);
+            // Fallback to template data if API fails
+            renderChartsWithStaticData();
+        });
+
+    function renderCharts(data) {
+        const chartConfig = {
+            responsive: true,
+            maintainAspectRatio: true
+        };
+
+        // 1. Line Chart - Microaneurysms
+        const maCtx = document.getElementById('maChart').getContext('2d');
+        new Chart(maCtx, {
+            type: 'line',
+            data: {
+                labels: data.dates,
+                datasets: [{
+                    label: 'Microaneurysms Count',
+                    data: data.ma_counts,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#007bff',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 8,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                ...chartConfig,
+                plugins: {
+                    legend: { display: true, labels: { usePointStyle: true, padding: 15, font: { size: 12, weight: 'bold' } } },
+                    title: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { drawBorder: false, color: 'rgba(0, 0, 0, 0.05)' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // 2. Line Chart - Lesion Area
+        const areaCtx = document.getElementById('areaChart').getContext('2d');
+        new Chart(areaCtx, {
+            type: 'line',
+            data: {
+                labels: data.dates,
+                datasets: [{
+                    label: 'Lesion Area (px²)',
+                    data: data.lesion_areas,
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#28a745',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 8,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                ...chartConfig,
+                plugins: { legend: { display: true } },
+                scales: {
+                    y: { beginAtZero: true, grid: { drawBorder: false, color: 'rgba(0, 0, 0, 0.05)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // 3. Bar Chart - Comparison
+        const barCtx = document.getElementById('barChart').getContext('2d');
+        new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: data.dates,
+                datasets: [{
+                    label: 'Microaneurysms',
+                    data: data.ma_counts,
+                    backgroundColor: 'rgba(0, 123, 255, 0.7)',
+                    borderColor: '#007bff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                ...chartConfig,
+                indexAxis: 'x',
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // 4. Line Chart - Confidence Scores
+        const confidenceCtx = document.getElementById('confidenceChart').getContext('2d');
+        new Chart(confidenceCtx, {
+            type: 'line',
+            data: {
+                labels: data.dates,
+                datasets: [{
+                    label: 'Confidence Score (%)',
+                    data: data.confidence_scores,
+                    borderColor: '#fd7e14',
+                    backgroundColor: 'rgba(253, 126, 20, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#fd7e14',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 8,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                ...chartConfig,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { drawBorder: false, color: 'rgba(0, 0, 0, 0.05)' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function renderChartsWithStaticData() {
+        // Fallback: render with template data if API fails
+        const staticData = {
+            dates: {{ dates|safe }},
+            ma_counts: {{ ma_counts|safe }},
+            lesion_areas: {{ lesion_areas|safe }}
+        };
+        renderCharts(staticData);
+    }
+});
+</script>
+{% endblock %}

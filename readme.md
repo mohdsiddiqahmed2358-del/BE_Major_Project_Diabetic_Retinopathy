@@ -17,13 +17,9 @@ An AI-powered web-based system for analyzing **retina fundus images** and managi
 **Mazher Uddin**  
 Associate Professor  
 
----
-
 ### 🧑‍🏫 Co-Guide / HoD
 **Dr. Abdul Rasool Mohammed**  
 Associate Professor & Head of Department, CSE (AIML)  
-
----
 
 ### 🏫 Institution
 **Lords Institute of Engineering and Technology, Hyderabad**
